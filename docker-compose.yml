@@ -1,0 +1,117 @@
+name: docker-ha-demo
+
+services:
+  nginx-lb:
+    build: ./lb
+    image: docker-ha-demo-lb
+    container_name: nginx-lb
+    hostname: nginx-lb
+    environment:
+      KEEPALIVED_MODE: ${KEEPALIVED_MODE:-preempt}
+    cap_add:
+      - NET_ADMIN
+      - NET_BROADCAST
+      - NET_RAW
+    ports:
+      - "8080:8080"   # L7 http (php-fpm backends)
+      - "8443:443"    # L7 https (self-signed)
+      - "2222:2222"   # L4 stream -> web1:22
+      - "2223:2223"   # L4 stream -> web2:22
+      - "2224:2224"   # L4 stream -> admin:22
+    volumes:
+      - ./lb/certs:/etc/nginx/ssl:ro
+      - ./web/html:/var/www/html:ro
+    networks:
+      lbnet:
+        ipv4_address: 172.18.0.10
+    depends_on:
+      - web1
+      - web2
+
+  nginx-lb2:
+    build: ./lb
+    image: docker-ha-demo-lb
+    container_name: nginx-lb2
+    hostname: nginx-lb2
+    environment:
+      KEEPALIVED_MODE: backup
+    cap_add:
+      - NET_ADMIN
+      - NET_BROADCAST
+      - NET_RAW
+    volumes:
+      - ./lb/certs:/etc/nginx/ssl:ro
+      - ./web/html:/var/www/html:ro
+    networks:
+      lbnet:
+        ipv4_address: 172.18.0.16
+    depends_on:
+      - web1
+      - web2
+
+  web1:
+    build: ./web
+    image: docker-ha-demo-web
+    container_name: web1
+    hostname: web1
+    volumes:
+      - ./web/html:/var/www/html:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      lbnet:
+        ipv4_address: 172.18.0.11
+
+  web2:
+    image: docker-ha-demo-web
+    container_name: web2
+    hostname: web2
+    depends_on:
+      - web1
+    volumes:
+      - ./web/html:/var/www/html:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    networks:
+      lbnet:
+        ipv4_address: 172.18.0.12
+
+  admin:
+    build: ./admin
+    image: docker-ha-demo-admin
+    container_name: admin
+    hostname: admin
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./scripts/mgmt.sh:/usr/local/bin/mgmt:ro
+    networks:
+      lbnet:
+        ipv4_address: 172.18.0.15
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    hostname: redis
+    networks:
+      lbnet:
+        ipv4_address: 172.18.0.13
+
+  mariadb:
+    image: mariadb:11
+    container_name: mariadb
+    hostname: mariadb
+    environment:
+      MARIADB_ROOT_PASSWORD: root123
+      MARIADB_DATABASE: lb_logs
+      MARIADB_USER: logger
+      MARIADB_PASSWORD: logger123
+    volumes:
+      - ./db/init:/docker-entrypoint-initdb.d:ro
+    networks:
+      lbnet:
+        ipv4_address: 172.18.0.14
+
+networks:
+  lbnet:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.18.0.0/16

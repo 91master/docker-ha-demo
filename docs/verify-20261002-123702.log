@@ -1,0 +1,46 @@
+== 1. all 7 containers running ==
+  [PASS] nginx-lb running
+  [PASS] nginx-lb2 running
+  [PASS] web1 running
+  [PASS] web2 running
+  [PASS] admin running
+  [PASS] redis running
+  [PASS] mariadb running
+== 2. VIP is held by the MASTER only ==
+  [PASS] nginx-lb holds 172.18.0.100
+  [PASS] nginx-lb2 has no VIP
+== 3. round-robin across both PHP-FPM backends (through the VIP) ==
+    warm-up samples: web1 web2
+    request 1 -> web1 (172.18.0.11)
+    request 2 -> web2 (172.18.0.12)
+    request 3 -> web1 (172.18.0.11)
+    request 4 -> web2 (172.18.0.12)
+    request 5 -> web1 (172.18.0.11)
+    request 6 -> web2 (172.18.0.12)
+    request 7 -> web2 (172.18.0.12)
+    request 8 -> web1 (172.18.0.11)
+  [PASS] both backends served traffic (4x web1, 4x web2)
+== 4. session survives landing on BOTH backends (redis session store) ==
+    dashboard 1 -> backend=web1  hello, verify
+    dashboard 2 -> backend=web2  hello, verify
+    dashboard 3 -> backend=web1  hello, verify
+    dashboard 4 -> backend=web2  hello, verify
+    dashboard 5 -> backend=web1  hello, verify
+    dashboard 6 -> backend=web2  hello, verify
+  [PASS] backend alternated during the session test
+  [PASS] login persisted across every request (same redis session)
+== 5. failover: kill keepalived on the master ==
+  [PASS] VIP drifted to nginx-lb2
+    HTTP via VIP: before=200  after=200
+  [PASS] traffic kept flowing through the VIP during failover
+== 6. failback (preempt) ==
+  [PASS] VIP returned to nginx-lb
+== 7. HTTPS server block (self-signed) ==
+  [PASS] https 8443 -> 200
+== 8. L4 stream proxy: SSH banner on TCP 2222 ==
+  [PASS] 2222 -> SSH-2.0-OpenSSH_10.0p2 Debian-7+deb13u4
+== 9. management container talks to the docker socket ==
+  [PASS] admin sees the container network (mgmt net)
+  [PASS] admin queried mariadb through the socket (mgmt logins)
+
+RESULT: 19 passed, 0 failed   (log: logs/verify-20261002-123702.log)
