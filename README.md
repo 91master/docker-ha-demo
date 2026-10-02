@@ -119,6 +119,35 @@ These are the parts that cost real time; they are the reason the repo exists.
 8. **`max_fails=0` on the upstreams** keeps both peers in rotation permanently — the right choice
    for a demo where you want to *see* the alternation.
 
+## Reproducibility
+
+Verified by taking a **fresh clone into a different directory** and running it with no manual steps:
+
+```bash
+git clone <repo> && cd <repo>
+bash scripts/up.sh        # generates the cert, builds, starts 7 containers
+bash scripts/verify.sh    # → 19 passed, 0 failed
+```
+
+The log from that fresh-clone run is kept in `docs/verify-fresh-clone-20261002.log`.
+
+**Requirements**
+
+- Docker Engine + Compose v2
+- `openssl` — only used by `up.sh` to generate the self-signed cert (`lb/certs/` is git-ignored
+  on purpose, so it is created on first run)
+- Network access to a container registry, to pull `nginx:alpine`, `php:8.2-fpm`, `mariadb:11`,
+  `redis:7-alpine` (behind a restrictive network, configure a registry mirror first — the build
+  was tested with one)
+
+Everything else the stack needs is in the repo; `lb/certs/` and `logs/` are generated locally.
+
+**Known portability note**
+
+`verify.sh` probes the VIP from the *host*, which assumes the host can route to the compose bridge
+network. That is true on Linux and WSL2, but usually **not** on Docker Desktop for Mac/Windows —
+on those hosts, run the probes from inside a container instead (e.g. `docker exec <lb> wget -qO- ...`).
+
 ## Limits
 
 - Single-host demo. Plain HTTP inside the bridge network, a self-signed certificate, and demo
