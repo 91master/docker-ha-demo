@@ -1,0 +1,17 @@
+-- Schema for lb_logs (created by the mariadb entrypoint via MARIADB_DATABASE)
+CREATE TABLE IF NOT EXISTS users (
+    id         INT AUTO_INCREMENT PRIMARY KEY,
+    username   VARCHAR(32) NOT NULL UNIQUE,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_seen  DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE = InnoDB;
+
+CREATE TABLE IF NOT EXISTS login_logs (
+    id         INT AUTO_INCREMENT PRIMARY KEY,
+    username   VARCHAR(32) NOT NULL,
+    backend    VARCHAR(32) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+) ENGINE = InnoDB;
+
+GRANT ALL PRIVILEGES ON lb_logs.* TO 'logger'@'%';
+FLUSH PRIVILEGES;
