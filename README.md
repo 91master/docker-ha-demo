@@ -10,6 +10,17 @@ checks end to end and writes a log. The screenshot of that output is in
 
 ![architecture](docs/architecture.png)
 
+> **Demo credentials — local sandbox only.** The containers ship with throwaway passwords
+> (`root:root` for the in-container sshd, `MARIADB_ROOT_PASSWORD=root123`) and publish ports
+> 8080 / 443 / 2222 plus a TCP proxy to SSH on the host. They are built for a single local
+> machine behind a firewall. If you deploy this stack anywhere reachable, change every
+> credential, disable password logins, and do not publish port 2222.
+>
+> Nothing real is exposed by this repository: the `172.18.0.x` addresses are the project's own
+> Docker bridge subnet (identical on every machine that clones it), `lb/certs/` is generated on
+> first run and never committed, and there is no `.env`, hostname, public IP or key material
+> anywhere in the history.
+
 ## What it does
 
 | container   | IP           | role |
